@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# network — toggle the network manager window (its own quickshell instance,
+# separate from the bar).
+
+
+P="$(dirname "$(dirname "$(readlink -f "$0")")")/quickshell-network"
+
+if pgrep -f "qs -p $P" >/dev/null 2>&1; then
+    qs -p "$P" kill
+else
+    # one-shot rule: float + center the window (quickshell sets no WM_CLASS,
+    # but bspwm can match the window title as the rule's third field)
+    bspc rule -a '*:*:Network' -o state=floating center=on rectangle=430x560+0+0
+    exec qs -p "$P" -d -n
+fi

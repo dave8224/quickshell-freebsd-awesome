@@ -1,0 +1,19 @@
+#!/bin/sh
+
+iface=$(route -n get default 2>/dev/null | awk '/interface:/ {print $2}')
+[ -z "$iface" ] && exit 0
+
+case "$iface" in
+    wlan*)
+        ssid=$(ifconfig "$iface" 2>/dev/null |
+            awk -F'ssid ' '/ssid / {split($2,a," "); print a[1]; exit}')
+        [ -n "$ssid" ] || ssid="$iface"
+        echo "$ssid:wireless"
+        ;;
+    *)
+        ip=$(ifconfig "$iface" 2>/dev/null |
+            awk '/inet / {print $2; exit}')
+        [ -n "$ip" ] || ip="$iface"
+        echo "$ip:ethernet"
+        ;;
+esac

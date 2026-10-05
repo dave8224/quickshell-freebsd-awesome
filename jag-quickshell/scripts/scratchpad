@@ -1,0 +1,31 @@
+#!/bin/sh
+# scratchpad — toggle a class-tagged kitty dropdown.
+# Summons to the focused desktop, so it follows you across desktops and
+# monitors: hidden -> show here; visible elsewhere -> bring here;
+# visible here -> hide.
+# Usage: scratchpad [class] [command]
+
+CLASS="${1:-scratchpad}"
+CMD="${2:-}"
+
+id=$(xdotool search --class "^${CLASS}$" 2>/dev/null | head -n 1)
+
+if [ -z "$id" ]; then
+    if [ -n "$CMD" ]; then
+        kitty --class "$CLASS" -e $CMD &
+    else
+        kitty --class "$CLASS" &
+    fi
+    exit 0
+fi
+
+if [ -n "$(bspc query -N -n "$id.hidden" 2>/dev/null)" ]; then
+    bspc node "$id" -d focused
+    bspc node "$id" -g hidden=off
+    bspc node "$id" -f
+elif [ "$(bspc query -D -n "$id")" != "$(bspc query -D -d focused)" ]; then
+    bspc node "$id" -d focused
+    bspc node "$id" -f
+else
+    bspc node "$id" -g hidden=on
+fi

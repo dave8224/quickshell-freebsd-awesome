@@ -1,0 +1,5 @@
+#!/bin/sh
+
+boot=$(sysctl -n kern.boottime | awk '{print $4}' | tr -d ',')
+now=$(date +%s)
+echo $((now - boot))

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+awesome-client '
+local awful = require("awful")
+local s = awful.screen.focused()
+
+local current = 0
+local occupied = 0
+
+for i, t in ipairs(s.tags) do
+    if t.selected then
+        current = i - 1
+    end
+
+    if #t:clients() > 0 then
+        occupied = occupied + 2^(i - 1)
+    end
+end
+
+return string.format("%d %d %d", current, #s.tags, occupied)
+' | sed -n 's/^[[:space:]]*string "\(.*\)"/\1/p'

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+action="$1"
+tag="$2"
+
+case "$action" in
+    view)
+        awesome-client "local awful=require('awful'); local t=awful.screen.focused().tags[$tag]; if t then t:view_only() end"
+        ;;
+    send)
+        awesome-client "local awful=require('awful'); local t=awful.screen.focused().tags[$tag]; if t and client.focus then client.focus:move_to_tag(t) end"
+        ;;
+esac

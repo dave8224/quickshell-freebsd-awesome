@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# Simple script to handle a DIY shutdown menu with rofi.
+#
+# Requirements:
+# - rofi
+# - systemd (can be replaced for other init systems if needed)
+
+ROFI_THEME="$HOME/.config/rofi/dave-tokyonight.rasi"
+
+chosen=$(printf '%s\n' "[Cancel]" "Logout" "Shutdown" "Reboot" | \
+    rofi -dmenu -i -p "Power Menu" -line-padding 4 -hide-scrollbar -theme "$ROFI_THEME")
+
+case "$chosen" in
+    Logout)
+        awesome-client 'awesome.quit()'
+        ;;
+    Shutdown) shutdown -p now ;;
+    Reboot)   shutdown -r now ;;
+    *)        exit 0 ;;  # [Cancel] or empty (Escape)
+esac

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+# help — rofi-rendered keybind cheatsheet, parsed from sxhkdrc.
+# Section headers use the `header:` color from colors.rasi (kept distinct
+# from selection accent so highlighted rows don't disappear). Keybind names
+# are bold, no fixed color — text follows the theme's foreground.
+
+SXHKDRC="$HOME/.config/jag-quickshell/sxhkd/sxhkdrc"
+THEME="$HOME/.config/jag-quickshell/rofi/keybinds.rasi"
+COLORS="$HOME/.config/jag-quickshell/rofi/colors.rasi"
+
+[ -r "$SXHKDRC" ] || { notify-send "help" "sxhkdrc not found: $SXHKDRC"; exit 1; }
+
+# Pull section-header color from colors.rasi (theme switcher rewrites it).
+ACCENT=$(grep -E '^[[:space:]]*header:' "$COLORS" 2>/dev/null | grep -oE '#[0-9a-fA-F]{6}' | head -1)
+ACCENT=${ACCENT:-#ff8f40}
+
+awk -v accent="$ACCENT" '
+    function xmlesc(s) {
+        gsub(/&/, "\\&amp;", s)
+        gsub(/</, "\\&lt;", s)
+        gsub(/>/, "\\&gt;", s)
+        return s
+    }
+    BEGIN { last = "" }
+
+    # Section marker: # === NAME ===
+    /^#[[:space:]]*===[[:space:]]+.+[[:space:]]+===[[:space:]]*$/ {
+        s = $0
+        sub(/^#[[:space:]]*===[[:space:]]+/, "", s)
+        sub(/[[:space:]]+===[[:space:]]*$/, "", s)
+        printf "<span size=\"large\" weight=\"bold\" foreground=\"%s\">── %s ──</span>\n", accent, xmlesc(s)
+        last = ""
+        next
+    }
+
+    # Regular comment → buffer as description (robustly strip leading # and whitespace)
+    /^#/ {
+        s = $0
+        sub(/^#[[:space:]]*/, "", s)
+        last = s
+        next
+    }
+
+    # Keybind line (starts with a letter, including XF86 / Print)
+    /^[A-Za-z]/ && last {
+        printf "<b>%-30s</b>  %s\n", xmlesc($0), xmlesc(last)
+        last = ""
+        next
+    }
+
+    { last = "" }
+' "$SXHKDRC" | rofi -dmenu -markup-rows -i -p "Keybindings" \
+    -line-padding 4 -hide-scrollbar -theme "$THEME"

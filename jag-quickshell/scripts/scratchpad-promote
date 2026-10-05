@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+# scratchpad-promote — promote any focused window into a scratchpad slot.
+# Slots are persisted under ~/.cache/bspwm/scratchpads/<N>.
+#
+# Usage:
+#   scratchpad-promote add     [N]   # store focused window in slot N (default 1) and hide it
+#   scratchpad-promote toggle  [N]   # show/hide slot N
+#   scratchpad-promote release [N]   # forget slot N (window stays visible, no longer tracked)
+#   scratchpad-promote auto    [N]   # add focused window if slot empty, else toggle visibility
+
+STATE_DIR="$HOME/.cache/bspwm/scratchpads"
+mkdir -p "$STATE_DIR"
+
+action="${1:-toggle}"
+slot="${2:-1}"
+state_file="$STATE_DIR/$slot"
+
+notify() { notify-send -u low -t 2000 "scratchpad" "$*"; }
+
+case "$action" in
+    add)
+        node=$(bspc query -N -n focused)
+        [ -z "$node" ] && { notify "no focused window"; exit 1; }
+
+        # Evict any prior occupant of this slot back to visible
+        if [ -f "$state_file" ]; then
+            prev=$(cat "$state_file")
+            bspc node "$prev" -g hidden=off 2>/dev/null
+        fi
+
+        echo "$node" > "$state_file"
+        bspc node "$node" -t floating
+        bspc node "$node" -g hidden=on
+        notify "slot $slot: stored"
+        ;;
+    toggle)
+        if [ ! -f "$state_file" ]; then
+            notify "slot $slot: empty"; exit 1
+        fi
+        node=$(cat "$state_file")
+        if ! bspc query -N -n "$node" >/dev/null 2>&1; then
+            rm -f "$state_file"
+            notify "slot $slot: window gone, cleared"; exit 1
+        fi
+        # summon to the focused desktop; only hide when it's already here
+        if [ -n "$(bspc query -N -n "$node.hidden" 2>/dev/null)" ]; then
+            bspc node "$node" -d focused
+            bspc node "$node" -g hidden=off
+            bspc node "$node" -f
+        elif [ "$(bspc query -D -n "$node")" != "$(bspc query -D -d focused)" ]; then
+            bspc node "$node" -d focused
+            bspc node "$node" -f
+        else
+            bspc node "$node" -g hidden=on
+        fi
+        ;;
+    release)
+        if [ -f "$state_file" ]; then
+            node=$(cat "$state_file")
+            bspc node "$node" -g hidden=off 2>/dev/null
+            rm -f "$state_file"
+            notify "slot $slot: released"
+        fi
+        ;;
+    auto)
+        if [ -f "$state_file" ]; then
+            exec "$0" toggle "$slot"
+        else
+            exec "$0" add "$slot"
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {add|toggle|release|auto} [slot]" >&2
+        exit 1
+        ;;
+esac
